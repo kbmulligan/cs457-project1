@@ -302,10 +302,12 @@ int recv_msg (int socketfd) {
     int bufferlen = 255;
     char buffer[bufferlen];
     int flags = 0;
-
+ 
+    cout << "Waiting for message..." << endl;
     int bytes_received = recv(socketfd, buffer, bufferlen, flags);
 
-    cout << "Message from the other side: " << buffer << endl;
+    cout << "Message received: " << buffer << endl;
+    cout << "Number of bytes: " << bytes_received << endl;
 
     return 0;
 }
