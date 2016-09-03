@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (void);
 int check_args (void);
@@ -26,10 +27,18 @@ int get_ip (void);
 
 using namespace std;
 
-int main () {
+int main (int argc, char* argv[]) {
 
     cout << "Hello networking world!" << endl;
     cout << "Successful makefile?" << endl;
+
+    if (argc == 1) {
+        server_mode();
+    } else if (argc == 5) {
+        client_mode();
+    } else {
+        usage(argc, argv);
+    }
 
     return 0;
 }
@@ -40,7 +49,7 @@ int get_ip () {
 
     struct addrinfo hints, *res, *p;
     int status;
-    char ipstring[INET6_ADDRSTRLEN];
+    char ipstr[INET6_ADDRSTRLEN];
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -54,6 +63,26 @@ int get_ip () {
         return 2;
     }
 
+    for (p = res; p != NULL; p = p->ai_next) {
+        void *addr;
+        char *ipver;
+        
+
+        if (p->ai_family == AF_INET) {
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+            ipver = "IPv4";
+        } else {
+            struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+            addr = &(ipv6->sin6_addr);
+            ipver = "IPv6";
+        }
+
+        inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
+        cout << ipver << " : " << ipstr << endl;
+    }
+
+    freeaddrinfo(res);
 
     return ip;
 }
@@ -62,6 +91,7 @@ int server_mode () {
 
     cout << "Server mode..." << endl;
 
+    get_ip();
     print_status(0, 0);
     start_listening();
 
@@ -97,10 +127,38 @@ int print_status (int ip, int port) {
 
 int start_listening () {
 
+    string port = "31337"; 
+    struct addrinfo hints, *res;
+    int sockfd = -1;
 
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
 
+    int status = getaddrinfo(NULL, port.c_str(), &hints, &res);
+    if (status == -1) {
+        cerr << "start_listening error: getaddrinfo" << endl;
+        return 2;
+    }
+    
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (status == -1) {
+        cerr << "start_listening error: socket" << endl;
+        return 2;
+    }
+
+    status = bind(sockfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        cerr << "start_listening error: bind" << endl;
+        return 2;
+    }
+    
     return 0;
 }
 
-
+void usage (int argc, char* argv[]) {
+    cout << "Usage: " << argv[0] << "[-p <PORT> -s <SERVER IP>]" << endl;
+    return;
+}
 
