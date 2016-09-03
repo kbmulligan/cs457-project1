@@ -24,10 +24,11 @@ const int BACKLOG = 1;
 
 void usage (int argc, char* argv[]);
 int server_mode (void);
-int client_mode (void);
+int client_mode (string ip, string port);
 int check_args (void);
 int start_listening (int portreq);
-int print_status (int ip, int port);
+int print_status (string ip, string port);
+int make_connection (string ip, string port);
 int get_ip (void);
 int comm_loop(int socketfd, int send_first);
 
@@ -48,7 +49,9 @@ int main (int argc, char* argv[]) {
     if (argc == 1) {
         server_mode();
     } else if (argc == 5) {
-        client_mode();
+        string ip(argv[4]);
+        string port(argv[2]);
+        client_mode(ip, port);
     } else {
         usage(argc, argv);
     }
@@ -117,24 +120,64 @@ int server_mode () {
     return 0;
 }
 
-int client_mode () {
+int client_mode (string ip, string port) {
 
     cout << "Client mode..." << endl;
 
+    cout << "SERVER : " << ip << endl;
+    cout << "PORT   : " << port << endl;
+
+    make_connection(ip, port);
 
     return 0;
 }
 
+int make_connection (string ip, string port) {
+
+    struct addrinfo hints, *res;
+    int sockfd, connectedfd = -1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &res);
+    if (status == -1) {
+        cerr << "make_connection error: getaddrinfo" << endl;
+        return 2;
+    }
+    
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (status == -1) {
+        cerr << "make_connection error: socket" << endl;
+        return 2;
+    }
+
+    status = connect(sockfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        close(sockfd);
+        cerr << "make_connection error: connect" << endl;
+        return 2;
+    }
+
+    
+    // check if everything's good to go, then start comm
+    comm_loop(sockfd, true);    
+    
+    close(sockfd);
+    return 0;
+}
 
 int check_args () {
     cout << "Checking arguments..." << endl;
+
 
 
     return false;
 }
 
 
-int print_status (int ip, int port) {
+int print_status (string ip, string port) {
 
     cout << "Status..." << endl;
 
@@ -169,16 +212,22 @@ int start_listening (int portreq) {
 
     status = bind(sockfd, res->ai_addr, res->ai_addrlen);
     if (status == -1) {
-
+        close(sockfd);
         cerr << "start_listening error: bind" << endl;
         return 2;
     }
     
     status = listen(sockfd, BACKLOG);
     if (status == -1) {
+        close(sockfd);
         cerr << "start_listening error: listen" << endl;
         return 2;
     }
+ 
+    char ipstr[INET6_ADDRSTRLEN];
+    inet_ntop(res->ai_family, res->ai_addr, ipstr, sizeof(ipstr));
+    print_status(ipstr, port);
+    cout << "Waiting for connection..." << endl;
 
     struct sockaddr_storage peeraddr;
     socklen_t peeraddrsize = sizeof(peeraddr);
