@@ -30,7 +30,7 @@ int start_listening (int portreq);
 int print_status (string ip, string port);
 int make_connection (string ip, string port);
 int get_ip (void);
-int comm_loop(int socketfd, int send_first);
+int comm_loop(int socketfd);
 
 int recv_msg(int socketfd);
 int send_msg(int socketfd);
@@ -109,12 +109,29 @@ int get_ip () {
     return ip;
 }
 
+int get_ip_from_addr (struct addrinfo* addr, char* ipstr) {
+ 
+    void *address;
+
+    if (addr->ai_family == AF_INET) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *)addr->ai_addr;
+        address = &(ipv4->sin_addr);
+    } else {
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)addr->ai_addr;
+        address = &(ipv6->sin6_addr);
+    }
+
+    inet_ntop(addr->ai_family, address, ipstr, sizeof(ipstr));
+
+    return 0;
+}
+
 int server_mode () {
 
     cout << "Server mode..." << endl;
 
-    get_ip();
-    print_status(0, 0);
+    //get_ip();
+    print_status(" NOTHING ", " NOTHING ");
     start_listening(PORT);
 
     return 0;
@@ -162,7 +179,8 @@ int make_connection (string ip, string port) {
 
     
     // check if everything's good to go, then start comm
-    comm_loop(sockfd, true);    
+    send_msg(connectedfd);
+    comm_loop(sockfd);    
     
     close(sockfd);
     return 0;
@@ -181,8 +199,8 @@ int print_status (string ip, string port) {
 
     cout << "Status..." << endl;
 
-    cout << "IP :   " << ip << endl;
-    cout << "PORT : " << port << endl;
+    cout << "IP   :   " << ip << endl;
+    cout << "PORT :   " << port << endl;
 
     return 0;
 }
@@ -225,7 +243,7 @@ int start_listening (int portreq) {
     }
  
     char ipstr[INET6_ADDRSTRLEN];
-    inet_ntop(res->ai_family, res->ai_addr, ipstr, sizeof(ipstr));
+    get_ip_from_addr(res, ipstr);
     print_status(ipstr, port);
     cout << "Waiting for connection..." << endl;
 
@@ -238,7 +256,7 @@ int start_listening (int portreq) {
         return 2;
     } else {
         cout << "Good connection!" << endl;
-        comm_loop(connectedfd, false);
+        comm_loop(connectedfd);
     }
     
 
@@ -247,12 +265,13 @@ int start_listening (int portreq) {
     return 0;
 }
 
-int comm_loop (int socketfd, int sending) {
-    if (sending) {
+int comm_loop (int socketfd) {
+    
+    while (1) {
         send_msg(socketfd); 
-    } else {
         recv_msg(socketfd);
     }
+
     return 0;
 }
 
@@ -274,7 +293,7 @@ int send_msg (int socketfd) {
     int flags = 0;
 
     int bytes_sent = send(socketfd, msg, msglen, flags);
-
+ 
     return 0;
 }
 
