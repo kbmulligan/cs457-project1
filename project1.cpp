@@ -19,15 +19,22 @@
 
 using namespace std;
 
+const int PORT = 31337;
 const int BACKLOG = 1;
 
 void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (void);
 int check_args (void);
-int start_listening (void);
+int start_listening (int portreq);
 int print_status (int ip, int port);
 int get_ip (void);
+int comm_loop(int socketfd, int send_first);
+
+int recv_msg(int socketfd);
+int send_msg(int socketfd);
+string prompt_for_msg();
+
 
 char* packetize (string msg);
 
@@ -36,8 +43,7 @@ char* packetize (string msg);
 
 int main (int argc, char* argv[]) {
 
-    cout << "Hello networking world!" << endl;
-    cout << "Successful makefile?" << endl;
+    cout << "Welcome to chat!" << endl;
 
     if (argc == 1) {
         server_mode();
@@ -78,17 +84,16 @@ int get_ip () {
 
     for (p = res; p != NULL; p = p->ai_next) {
         void *addr;
-        char *ipver;
-        
+        string ipver;
 
         if (p->ai_family == AF_INET) {
             struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
             addr = &(ipv4->sin_addr);
-            ipver = "IPv4";
+            ipver = string("IPv4");
         } else {
             struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
             addr = &(ipv6->sin6_addr);
-            ipver = "IPv6";
+            ipver = string("IPv6");
         }
 
         inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
@@ -107,7 +112,7 @@ int server_mode () {
 
     get_ip();
     print_status(0, 0);
-    start_listening();
+    start_listening(PORT);
 
     return 0;
 }
@@ -139,7 +144,7 @@ int print_status (int ip, int port) {
     return 0;
 }
 
-int start_listening () {
+int start_listening (int portreq) {
     
     string port = "31337"; 
     struct addrinfo hints, *res;
@@ -179,10 +184,63 @@ int start_listening () {
     socklen_t peeraddrsize = sizeof(peeraddr);
 
     connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
+    if (status == -1) {
+        cerr << "start_listening error: accept" << endl;
+        return 2;
+    } else {
+        cout << "Good connection!" << endl;
+        comm_loop(connectedfd, false);
+    }
+    
+
+    close(sockfd);
+    close(connectedfd);
+    return 0;
+}
+
+int comm_loop (int socketfd, int sending) {
+    if (sending) {
+        send_msg(socketfd); 
+    } else {
+        recv_msg(socketfd);
+    }
+    return 0;
+}
+
+string prompt_for_msg (void) {
+
+    return string("NO"); 
+}
+
+int send_msg (int socketfd) {
+    
+    //char* msg = prompt_for_msg();
+
+    char msg[172];
+    int msglen = sizeof(msg);
+
+    cout << "Type message: ";
+    cin.getline(msg, msglen);
+
+    int flags = 0;
+
+    int bytes_sent = send(socketfd, msg, msglen, flags);
 
     return 0;
 }
 
+int recv_msg (int socketfd) {
+
+    int bufferlen = 255;
+    char buffer[bufferlen];
+    int flags = 0;
+
+    int bytes_received = recv(socketfd, buffer, bufferlen, flags);
+
+    cout << "Message from the other side: " << buffer << endl;
+
+    return 0;
+}
 // Stores a pointer to a memory block formatted for packet transmission in pointer 'data'
 // Returns 0 on success
 int packetize (string msg, char* data) {
