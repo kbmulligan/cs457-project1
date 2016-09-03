@@ -179,7 +179,7 @@ int make_connection (string ip, string port) {
 
     
     // check if everything's good to go, then start comm
-    send_msg(connectedfd);
+    send_msg(sockfd);
     comm_loop(sockfd);    
     
     close(sockfd);
