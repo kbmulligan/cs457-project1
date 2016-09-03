@@ -268,8 +268,8 @@ int start_listening (int portreq) {
 int comm_loop (int socketfd) {
     
     while (1) {
-        send_msg(socketfd); 
         recv_msg(socketfd);
+        send_msg(socketfd); 
     }
 
     return 0;
@@ -309,6 +309,7 @@ int recv_msg (int socketfd) {
 
     return 0;
 }
+
 // Stores a pointer to a memory block formatted for packet transmission in pointer 'data'
 // Returns 0 on success
 int packetize (string msg, char* data) {
