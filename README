@@ -1,0 +1,11 @@
+CHAT
+=========================
+
+Usage: chat [-p PORT -s SERVER]
+
+Chat is a message-passing program that functions as both 
+client and server. 
+
+Running the program with no arguments starts server mode. 
+Running the program with the port (-p) and server (-s) 
+options starts it in client mode.
