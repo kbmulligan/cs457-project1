@@ -17,6 +17,10 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+using namespace std;
+
+const int BACKLOG = 1;
+
 void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (void);
@@ -25,7 +29,10 @@ int start_listening (void);
 int print_status (int ip, int port);
 int get_ip (void);
 
-using namespace std;
+char* packetize (string msg);
+
+
+
 
 int main (int argc, char* argv[]) {
 
@@ -46,6 +53,7 @@ int main (int argc, char* argv[]) {
 int get_ip () {
  
     int ip = 0;
+    string port = "31339";
 
     struct addrinfo hints, *res, *p;
     int status;
@@ -54,10 +62,15 @@ int get_ip () {
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
 
     string host = "localhost";
+
+    char hostname[64];
+
+    gethostname(hostname, 64);
     
-    status = getaddrinfo(host.c_str(), NULL, &hints, &res); 
+    status = getaddrinfo(hostname,  NULL, &hints, &res); 
     if (status != 0) {
         cerr << "getaddrinfo: " << gai_strerror(status) << endl;
         return 2;
@@ -80,6 +93,7 @@ int get_ip () {
 
         inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
         cout << ipver << " : " << ipstr << endl;
+
     }
 
     freeaddrinfo(res);
@@ -126,15 +140,15 @@ int print_status (int ip, int port) {
 }
 
 int start_listening () {
-
+    
     string port = "31337"; 
     struct addrinfo hints, *res;
-    int sockfd = -1;
+    int sockfd, connectedfd = -1;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;       // use the IP of this machine
 
     int status = getaddrinfo(NULL, port.c_str(), &hints, &res);
     if (status == -1) {
@@ -150,15 +164,37 @@ int start_listening () {
 
     status = bind(sockfd, res->ai_addr, res->ai_addrlen);
     if (status == -1) {
+
         cerr << "start_listening error: bind" << endl;
         return 2;
     }
     
+    status = listen(sockfd, BACKLOG);
+    if (status == -1) {
+        cerr << "start_listening error: listen" << endl;
+        return 2;
+    }
+
+    struct sockaddr_storage peeraddr;
+    socklen_t peeraddrsize = sizeof(peeraddr);
+
+    connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
+
     return 0;
 }
 
+// Stores a pointer to a memory block formatted for packet transmission in pointer 'data'
+// Returns 0 on success
+int packetize (string msg, char* data) {
+    short version = 457;
+    short msg_length = -1;
+
+    return 0;
+}
+
+
 void usage (int argc, char* argv[]) {
-    cout << "Usage: " << argv[0] << "[-p <PORT> -s <SERVER IP>]" << endl;
+    cout << "Usage: " << argv[0] << "[-p PORT -s SERVER]" << endl;
     return;
 }
 
