@@ -1,4 +1,5 @@
-// project1.cpp - A chat server and client that pass messages back and forth across a socket connection
+// project1.cpp - A chat server and client that passes messages 
+//                back and forth across a socket connection
 // Author: K. Brett Mulligan
 // Date: Sep 2016
 // CSU - Comp Sci
@@ -21,11 +22,12 @@ using namespace std;
 
 const int PORT = 31337;
 const int BACKLOG = 1;
+const int CHARLIMIT = 140;
 
 void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (string ip, string port);
-int check_args (void);
+int check_args (string serverval, string portval);
 int start_listening (int portreq);
 int print_status (string ip, string port);
 int make_connection (string ip, string port);
@@ -35,23 +37,47 @@ int comm_loop(int socketfd);
 int recv_msg(int socketfd);
 int send_msg(int socketfd);
 string prompt_for_msg();
-
+bool check_msg (char* msg);
 
 char* packetize (string msg);
-
-
 
 
 int main (int argc, char* argv[]) {
 
     cout << "Welcome to chat!" << endl;
 
+    cout << "INADDR_ANY" << INADDR_ANY << endl;
+
+    int opt = 0;
+    string portval, serverval;
+
+    while ((opt = getopt(argc, argv, "p:s:")) != -1) {
+        switch (opt) {
+            case 'p':
+                portval = optarg;
+                break;
+            case 's':
+                serverval = optarg;
+                break;
+            case '?':
+                if (optopt == 's' || optopt == 'p') {
+                    cerr << "Option -" << optopt << " requires an argument." << endl;
+                } else {
+                    cerr << "Unknown option " << optopt << endl;
+                }
+
+            default:
+                cerr << "getopt error: default ... aborting!" << endl;
+                abort();
+        }
+
+    }
+
     if (argc == 1) {
         server_mode();
-    } else if (argc == 5) {
-        string ip(argv[4]);
-        string port(argv[2]);
-        client_mode(ip, port);
+    } else if (serverval.length() and portval.length()) {
+        check_args(serverval, portval);
+        client_mode(serverval, portval);
     } else {
         usage(argc, argv);
     }
@@ -62,7 +88,6 @@ int main (int argc, char* argv[]) {
 int get_ip () {
  
     int ip = 0;
-    string port = "31339";
 
     struct addrinfo hints, *res, *p;
     int status;
@@ -112,16 +137,18 @@ int get_ip () {
 int get_ip_from_addr (struct addrinfo* addr, char* ipstr) {
  
     void *address;
+    short sin_fam;
 
     if (addr->ai_family == AF_INET) {
         struct sockaddr_in *ipv4 = (struct sockaddr_in *)addr->ai_addr;
         address = &(ipv4->sin_addr);
+        sin_fam = ipv4->sin_family;
     } else {
         struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)addr->ai_addr;
         address = &(ipv6->sin6_addr);
     }
 
-    inet_ntop(addr->ai_family, address, ipstr, sizeof(ipstr));
+    inet_ntop(sin_fam, address, ipstr, sizeof(ipstr));
 
     return 0;
 }
@@ -129,9 +156,6 @@ int get_ip_from_addr (struct addrinfo* addr, char* ipstr) {
 int server_mode () {
 
     cout << "Server mode..." << endl;
-
-    //get_ip();
-    print_status(" NOTHING ", " NOTHING ");
     start_listening(PORT);
 
     return 0;
@@ -140,16 +164,16 @@ int server_mode () {
 int client_mode (string ip, string port) {
 
     cout << "Client mode..." << endl;
-
-    cout << "SERVER : " << ip << endl;
-    cout << "PORT   : " << port << endl;
-
     make_connection(ip, port);
 
     return 0;
 }
 
 int make_connection (string ip, string port) {
+
+    cout << "Connecting to..." << endl;
+    cout << "SERVER : " << ip << endl;
+    cout << "PORT   : " << port << endl;
 
     struct addrinfo hints, *res;
     int sockfd, connectedfd = -1;
@@ -177,8 +201,14 @@ int make_connection (string ip, string port) {
         return 2;
     }
 
+    // done with this addrinfo
+    freeaddrinfo(res);
     
     // check if everything's good to go, then start comm
+    if (!sockfd) {
+        cerr << "make_connection error: sockfd == NULL" << endl;
+    }
+
     send_msg(sockfd);
     comm_loop(sockfd);    
     
@@ -186,12 +216,12 @@ int make_connection (string ip, string port) {
     return 0;
 }
 
-int check_args () {
+int check_args (string serverval, string portval) {
     cout << "Checking arguments..." << endl;
 
 
 
-    return false;
+    return 0;
 }
 
 
@@ -246,6 +276,7 @@ int start_listening (int portreq) {
     get_ip_from_addr(res, ipstr);
     print_status(ipstr, port);
     cout << "Waiting for connection..." << endl;
+    cout << "INADDR_ANY" << INADDR_ANY << endl;
 
     struct sockaddr_storage peeraddr;
     socklen_t peeraddrsize = sizeof(peeraddr);
@@ -259,6 +290,7 @@ int start_listening (int portreq) {
         comm_loop(connectedfd);
     }
     
+    freeaddrinfo(res);
 
     close(sockfd);
     close(connectedfd);
@@ -282,13 +314,16 @@ string prompt_for_msg (void) {
 
 int send_msg (int socketfd) {
     
-    //char* msg = prompt_for_msg();
-
     char msg[172];
     int msglen = sizeof(msg);
 
     cout << "Type message: ";
     cin.getline(msg, msglen);
+
+    while (check_msg(msg)) {
+        cout << "Type message: ";
+        cin.getline(msg, msglen);
+    }
 
     int flags = 0;
 
@@ -306,10 +341,22 @@ int recv_msg (int socketfd) {
     cout << "Waiting for message..." << endl;
     int bytes_received = recv(socketfd, buffer, bufferlen, flags);
 
-    cout << "Message received: " << buffer << endl;
-    cout << "Number of bytes: " << bytes_received << endl;
+    cout << "Message received: " << buffer << "(" << bytes_received << " bytes)" << endl;
 
     return 0;
+}
+
+// report error if msg is greater than 140 chars
+bool check_msg (char* msg) {
+
+    bool is_too_long = false;
+    int length = strlen(msg);
+    if (length > CHARLIMIT) {
+        cout << "ERROR: Input too long!" << endl;
+        is_too_long = true;
+    }
+
+    return is_too_long;
 }
 
 // Stores a pointer to a memory block formatted for packet transmission in pointer 'data'
@@ -323,7 +370,7 @@ int packetize (string msg, char* data) {
 
 
 void usage (int argc, char* argv[]) {
-    cout << "Usage: " << argv[0] << "[-p PORT -s SERVER]" << endl;
+    cout << "Usage: " << argv[0] << " [-p PORT -s SERVER]" << endl;
     return;
 }
 
