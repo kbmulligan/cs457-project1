@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -20,7 +21,7 @@
 
 using namespace std;
 
-const int PORT = 31337;
+const int PORT = 40404;
 const int BACKLOG = 1;
 const int CHARLIMIT = 140;
 
@@ -39,14 +40,14 @@ int send_msg(int socketfd);
 string prompt_for_msg();
 bool check_msg (char* msg);
 
+void *get_in_addr(struct sockaddr *sa);
+
 char* packetize (string msg);
 
 
 int main (int argc, char* argv[]) {
 
     cout << "Welcome to chat!" << endl;
-
-    cout << "INADDR_ANY" << INADDR_ANY << endl;
 
     int opt = 0;
     string portval, serverval;
@@ -98,12 +99,12 @@ int get_ip () {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    string host = "localhost";
 
     char hostname[64];
 
     gethostname(hostname, 64);
     
+    cout << "Getting hostname : " << hostname << endl;
     status = getaddrinfo(hostname,  NULL, &hints, &res); 
     if (status != 0) {
         cerr << "getaddrinfo: " << gai_strerror(status) << endl;
@@ -237,7 +238,7 @@ int print_status (string ip, string port) {
 
 int start_listening (int portreq) {
     
-    string port = "31337"; 
+    string port(to_string(portreq)); 
     struct addrinfo hints, *res;
     int sockfd, connectedfd = -1;
 
@@ -273,10 +274,17 @@ int start_listening (int portreq) {
     }
  
     char ipstr[INET6_ADDRSTRLEN];
-    get_ip_from_addr(res, ipstr);
-    print_status(ipstr, port);
     cout << "Waiting for connection..." << endl;
-    cout << "INADDR_ANY" << INADDR_ANY << endl;
+
+    get_ip();
+
+    cout << "Address info : ";
+    char ipaddrstr[INET6_ADDRSTRLEN];
+    cout << inet_ntop(AF_INET, get_in_addr(res->ai_addr), ipaddrstr, INET6_ADDRSTRLEN);
+    cout << endl;
+    
+    cout << "Port info    : " << PORT << endl;
+
 
     struct sockaddr_storage peeraddr;
     socklen_t peeraddrsize = sizeof(peeraddr);
@@ -286,7 +294,10 @@ int start_listening (int portreq) {
         cerr << "start_listening error: accept" << endl;
         return 2;
     } else {
+        char peeraddrstr[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET, &peeraddr, peeraddrstr, INET6_ADDRSTRLEN);
         cout << "Good connection!" << endl;
+        cout << "Connection from : " << peeraddrstr << endl;
         comm_loop(connectedfd);
     }
     
@@ -341,7 +352,7 @@ int recv_msg (int socketfd) {
     cout << "Waiting for message..." << endl;
     int bytes_received = recv(socketfd, buffer, bufferlen, flags);
 
-    cout << "Message received: " << buffer << "(" << bytes_received << " bytes)" << endl;
+    cout << "Message received: " << buffer << " (" << bytes_received << " bytes)" << endl;
 
     return 0;
 }
@@ -366,6 +377,16 @@ int packetize (string msg, char* data) {
     short msg_length = -1;
 
     return 0;
+}
+
+// get sockaddr, IPv4 or IPv6:
+void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 
