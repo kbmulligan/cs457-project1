@@ -28,7 +28,7 @@ const int CHARLIMIT = 140;
 void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (string ip, string port);
-int check_args (string serverval, string portval);
+bool check_args (string serverval, string portval);
 int start_listening (int portreq);
 int print_status (string ip, string port);
 int make_connection (string ip, string port);
@@ -40,7 +40,6 @@ int send_msg(int socketfd);
 string prompt_for_msg();
 bool check_msg (char* msg);
 
-void *get_in_addr(struct sockaddr *sa);
 
 char* packetize (string msg);
 
@@ -217,12 +216,17 @@ int make_connection (string ip, string port) {
     return 0;
 }
 
-int check_args (string serverval, string portval) {
-    cout << "Checking arguments..." << endl;
+bool check_args (string serverval, string portval) {
+    cout << "Checking arguments... ";
 
+    int invalid = false;
 
-
-    return 0;
+    if (atoi(portval.c_str())) {
+        invalid = true;
+    }
+    
+    cout << "Arguments valid!" << endl;
+    return invalid;
 }
 
 
@@ -388,20 +392,10 @@ int packetize (string msg, char* data) {
     short version = 457;
     short msg_length = -1;
 
+    //memcpy();
+
     return 0;
 }
-
-// from Beej's guide
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
 
 void usage (int argc, char* argv[]) {
     cout << "Usage: " << argv[0] << " [-p PORT -s SERVER]" << endl;
