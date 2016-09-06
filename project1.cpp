@@ -12,6 +12,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -21,7 +22,7 @@
 
 using namespace std;
 
-const int PORT = 40404;
+const int PORT = 33333;
 const int BACKLOG = 1;
 const int CHARLIMIT = 140;
 
@@ -32,7 +33,7 @@ bool check_args (string serverval, string portval);
 int start_listening (int portreq);
 int print_status (string ip, string port);
 int make_connection (string ip, string port);
-int get_ip (void);
+string get_ip (void);
 int comm_loop(int socketfd);
 
 int recv_msg(int socketfd);
@@ -85,9 +86,9 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int get_ip () {
+string get_ip () {
  
-    int ip = 0;
+    string ip;
 
     struct addrinfo hints, *res, *p;
     int status;
@@ -103,11 +104,11 @@ int get_ip () {
 
     gethostname(hostname, 64);
     
-    cout << "Getting hostname : " << hostname << endl;
+    //cout << "Getting hostname : " << hostname << endl;
     status = getaddrinfo(hostname,  NULL, &hints, &res); 
     if (status != 0) {
         cerr << "getaddrinfo: " << gai_strerror(status) << endl;
-        return 2;
+        return string("ERROR: check cerr");
     }
 
     for (p = res; p != NULL; p = p->ai_next) {
@@ -125,12 +126,13 @@ int get_ip () {
         }
 
         inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
-        cout << ipver << " : " << ipstr << endl;
+        //cout << ipver << " : " << ipstr << endl;
 
     }
 
     freeaddrinfo(res);
 
+    ip = string(ipstr);
     return ip;
 }
 
@@ -176,7 +178,7 @@ int make_connection (string ip, string port) {
     cout << "PORT   : " << port << endl;
 
     struct addrinfo hints, *res;
-    int sockfd, connectedfd = -1;
+    int sockfd = -1;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -262,12 +264,12 @@ int start_listening (int portreq) {
     for (p = res; p != NULL; p = p->ai_next) {
         usable_addresses++;
         
-        cout << "Address info : ";
+        //cout << "Address info : ";
         char ipaddrstr[INET6_ADDRSTRLEN];
         inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, ipaddrstr, INET6_ADDRSTRLEN); 
-        cout << ipaddrstr << endl;
+        //cout << ipaddrstr << endl;
     } 
-    cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+    //cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (status == -1) {
@@ -289,18 +291,7 @@ int start_listening (int portreq) {
         return 2;
     }
  
-    char ipstr[INET6_ADDRSTRLEN];
-    cout << "Waiting for connection..." << endl;
-
-    get_ip();
-
-    cout << "Address info : ";
-    char ipaddrstr[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(((struct sockaddr_in *)(res->ai_addr))->sin_addr), ipaddrstr, INET6_ADDRSTRLEN); 
-    cout << ipaddrstr << endl;
-    
-    cout << "Port info    : " << PORT << endl;
-
+    cout << "Waiting for connection to " << get_ip() << " on port " << port << endl;
 
     struct sockaddr_storage peeraddr;
     socklen_t peeraddrsize = sizeof(peeraddr);
@@ -355,6 +346,10 @@ int send_msg (int socketfd) {
     int flags = 0;
 
     int bytes_sent = send(socketfd, msg, msglen, flags);
+
+    if (bytes_sent < msglen) {
+        cout << "ERROR: Only partial message sent." << endl;
+    }
  
     return 0;
 }
@@ -393,6 +388,9 @@ int packetize (string msg, char* data) {
     short msg_length = -1;
 
     //memcpy();
+    stringstream packet;
+    packet << version;
+    packet << msg_length;
 
     return 0;
 }
