@@ -239,7 +239,7 @@ int print_status (string ip, string port) {
 int start_listening (int portreq) {
     
     string port(to_string(portreq)); 
-    struct addrinfo hints, *res;
+    struct addrinfo hints, *res, *p;
     int sockfd, connectedfd = -1;
 
     memset(&hints, 0, sizeof(hints));
@@ -252,7 +252,19 @@ int start_listening (int portreq) {
         cerr << "start_listening error: getaddrinfo" << endl;
         return 2;
     }
+
     
+    int usable_addresses = 0;
+    for (p = res; p != NULL; p = p->ai_next) {
+        usable_addresses++;
+        
+        cout << "Address info : ";
+        char ipaddrstr[INET6_ADDRSTRLEN];
+        inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, ipaddrstr, INET6_ADDRSTRLEN); 
+        cout << ipaddrstr << endl;
+    } 
+    cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (status == -1) {
         cerr << "start_listening error: socket" << endl;
@@ -276,12 +288,12 @@ int start_listening (int portreq) {
     char ipstr[INET6_ADDRSTRLEN];
     cout << "Waiting for connection..." << endl;
 
-    get_ip();
+    //get_ip();
 
     cout << "Address info : ";
     char ipaddrstr[INET6_ADDRSTRLEN];
-    cout << inet_ntop(AF_INET, get_in_addr(res->ai_addr), ipaddrstr, INET6_ADDRSTRLEN);
-    cout << endl;
+    inet_ntop(AF_INET, &(((struct sockaddr_in *)(res->ai_addr))->sin_addr), ipaddrstr, INET6_ADDRSTRLEN); 
+    cout << ipaddrstr << endl;
     
     cout << "Port info    : " << PORT << endl;
 
@@ -295,7 +307,7 @@ int start_listening (int portreq) {
         return 2;
     } else {
         char peeraddrstr[INET6_ADDRSTRLEN];
-        inet_ntop(AF_INET, &peeraddr, peeraddrstr, INET6_ADDRSTRLEN);
+        inet_ntop(AF_INET, &((struct sockaddr_in*) &peeraddr)->sin_addr, peeraddrstr, INET6_ADDRSTRLEN);
         cout << "Good connection!" << endl;
         cout << "Connection from : " << peeraddrstr << endl;
         comm_loop(connectedfd);
@@ -379,6 +391,7 @@ int packetize (string msg, char* data) {
     return 0;
 }
 
+// from Beej's guide
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
