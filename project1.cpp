@@ -288,7 +288,7 @@ int start_listening (int portreq) {
     char ipstr[INET6_ADDRSTRLEN];
     cout << "Waiting for connection..." << endl;
 
-    //get_ip();
+    get_ip();
 
     cout << "Address info : ";
     char ipaddrstr[INET6_ADDRSTRLEN];
