@@ -433,14 +433,14 @@ bool check_msg (const char* msg) {
 // Returns 0 on success
 int packetize (string msg, char* data) {
     short version = 457;
-    short msg_length = -1;
+    short msg_length = 0;
 
     //memcpy();
     stringstream packet;
     packet << htons(version);
     packet << htons(msg_length);
  
-    cout << packet << endl;
+    //cout << packet << endl;
 
     return 0;
 }
