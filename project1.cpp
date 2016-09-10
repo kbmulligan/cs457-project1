@@ -397,7 +397,7 @@ int send_msg (int socketfd) {
 
     packetize(msg, data);
 
-    cout << "Packetized: " << data << endl;
+    //cout << "Packetized: " << data << endl;
 
     int flags = 0;
 
