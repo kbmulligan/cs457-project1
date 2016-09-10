@@ -8,4 +8,15 @@ client and server.
 
 Running the program with no arguments starts server mode. 
 Running the program with the port (-p) and server (-s) 
-options starts it in client mode.
+options starts it in client mode. The client mode will 
+establish a socket connection to the given server on the 
+given port. Then the client and server will each alternate
+passing messages back and forth. The client will send 
+first, and both client and server will block until
+a message is received. Chat is terminated only using
+Ctrl-C. 
+
+ASSUMPTIONS:
+- User knows basic terminal operations
+- Port 55333 is available
+- Client knows server will be listening on Port 55333

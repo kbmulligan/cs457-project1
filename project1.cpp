@@ -26,7 +26,7 @@ using namespace std;
 
 const int PORT = 55333;
 const int BACKLOG = 1;
-const int CHARLIMIT = 140;
+const unsigned int CHARLIMIT = 140;
 
 void usage (int argc, char* argv[]);
 int server_mode (void);
@@ -43,10 +43,10 @@ int comm_loop(int socketfd);
 int recv_msg(int socketfd);
 int send_msg(int socketfd);
 string prompt_for_msg();
-bool check_msg (char* msg);
+bool check_msg (const char* msg);
 
 
-char* packetize (string msg);
+int packetize (string msg, char* data);
 
 
 int main (int argc, char* argv[]) {
@@ -81,7 +81,14 @@ int main (int argc, char* argv[]) {
     if (argc == 1) {
         server_mode();
     } else if (serverval.length() and portval.length()) {
-        check_args(serverval, portval);
+        if (check_args(serverval, portval)) {
+            cout << "Invalid arguments...exiting" << endl;
+            usage(argc, argv);
+            exit(1);
+        } else {
+            cout << "Valid!" << endl;
+        }
+
         client_mode(serverval, portval);
     } else {
         usage(argc, argv);
@@ -229,12 +236,12 @@ bool check_args (string serverval, string portval) {
 
     if (is_valid_port(portval)) {
         invalid = true;
-        cout << "INVALID port!!!" << endl;
+        cerr << "INVALID port!!!" << endl;
     }
     
     if (is_valid_ip_address(serverval)) {
         invalid = true;
-        cout << "INVALID server!" << endl;
+        cerr << "INVALID server!" << endl;
     }
 
     //cout << "Arguments valid!" << endl;
@@ -243,8 +250,10 @@ bool check_args (string serverval, string portval) {
 
 bool is_valid_port (string p) {
     bool invalid = false;
+    char* end;
+    end = NULL;
 
-    if (strtol(p.c_str(), NULL, 0) == 0) {
+    if (strtol(p.c_str(), &end, 0) == 0 || *end != '\0') {
         invalid = true;
     }
 
@@ -356,26 +365,36 @@ int comm_loop (int socketfd) {
 }
 
 string prompt_for_msg (void) {
+    string msg;
 
-    return string("NO"); 
+    cout << "Type message: ";
+    getline(cin, msg);
+
+    return msg; 
 }
 
 int send_msg (int socketfd) {
     
-    char msg[172];
+    string msg;
     int msglen = sizeof(msg);
+    char* data = NULL;
 
     cout << "Type message: ";
-    cin.getline(msg, msglen);
+    getline(cin, msg);
 
-    while (check_msg(msg)) {
+    while (check_msg(msg.c_str())) {
         cout << "Type message: ";
-        cin.getline(msg, msglen);
+        getline(cin, msg);
     }
+
+    msglen = msg.length();
+ 
+    //malloc();
+    packetize(string(msg), data);
 
     int flags = 0;
 
-    int bytes_sent = send(socketfd, msg, msglen, flags);
+    int bytes_sent = send(socketfd, msg.c_str(), msglen, flags);
 
     if (bytes_sent < msglen) {
         cout << "ERROR: Only partial message sent." << endl;
@@ -399,11 +418,10 @@ int recv_msg (int socketfd) {
 }
 
 // report error if msg is greater than 140 chars
-bool check_msg (char* msg) {
+bool check_msg (const char* msg) {
 
     bool is_too_long = false;
-    int length = strlen(msg);
-    if (length > CHARLIMIT) {
+    if (strlen(msg) > CHARLIMIT) {
         cout << "ERROR: Input too long!" << endl;
         is_too_long = true;
     }
@@ -419,8 +437,10 @@ int packetize (string msg, char* data) {
 
     //memcpy();
     stringstream packet;
-    packet << version;
-    packet << msg_length;
+    packet << htons(version);
+    packet << htons(msg_length);
+ 
+    cout << packet << endl;
 
     return 0;
 }
