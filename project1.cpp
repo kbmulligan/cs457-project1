@@ -418,7 +418,11 @@ int recv_msg (int socketfd) {
     cout << "Waiting for message..." << endl;
     int bytes_received = recv(socketfd, buffer, bufferlen, flags);
 
-    cout << "Message received: " << buffer << " (" << bytes_received << " bytes)" << endl;
+    unsigned short version = ntohs(buffer[0]);
+    unsigned short msglen = ntohs(buffer[2]);
+    cout << "Version: " << version << endl;
+    cout << "Message length: " << msglen << endl;
+    cout << "Message received: " << buffer + 4 << " (" << bytes_received << " bytes)" << endl;
 
     return 0;
 }
@@ -442,12 +446,12 @@ int packetize (string msg, char* data) {
     short msg_length = 0;
     const char* message = msg.c_str();
 
-    version = htons(version);
-    msg_length = htons(msg.length());
+    unsigned short version_net = htons(version);
+    unsigned short msg_length_net = htons(msg.length());
 
-    memcpy(data, &version, sizeof(version));
-    memcpy(data + sizeof(version), &msg_length, sizeof(msg_length));
-    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(msg));
+    memcpy(data, &version_net, sizeof(version_net));
+    memcpy(data + sizeof(version), &msg_length_net, sizeof(msg_length_net));
+    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(message));
  
     //stringstream packet;
     //packet << htons(version);
