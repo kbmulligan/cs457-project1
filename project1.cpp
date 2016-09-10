@@ -382,15 +382,15 @@ int send_msg (int socketfd) {
     cout << "Type message: ";
     getline(cin, msg);
 
-    cout << "You typed: " << msg << endl;
-
     while (check_msg(msg.c_str())) {
         cout << "Type message: ";
         getline(cin, msg);
     }
 
+    cout <<     "You typed   : " << msg << endl;
+
     int required = HEADERSIZE + msg.length();
-    cout << "Required bytes: " << required << "HEADERSIZE: " << HEADERSIZE << endl;
+    cout << "Required bytes: " << required << "   HEADERSIZE: " << HEADERSIZE << endl;
 
     data = (char *)malloc(required);
     memset(data, 0, required);
@@ -425,7 +425,7 @@ int recv_msg (int socketfd) {
     unsigned short msglen = ntohs(buffer[2]);
     cout << "Version: " << version << endl;
     cout << "Message length: " << msglen << endl;
-    cout << "Message received: " << buffer + 4 << " (" << bytes_received << " bytes)" << endl;
+    cout << "Message received: " << &buffer[4] << " (" << bytes_received << " bytes)" << endl;
 
     return 0;
 }
@@ -448,17 +448,20 @@ int packetize (string msg, char* data) {
     short version = 457;
     const char* message = msg.c_str();
 
-    cout << "Version (host): " << version << endl;
 
     unsigned short version_net = htons(version);
     unsigned short msg_length_net = htons(msg.length());
 
+    cout << "Version (host): " << version << endl;
     cout << "Version (network): " << version_net << endl;
+    cout << "Msg length (host): " << msg.length() << endl;
+    cout << "Msg length (network): " << msg_length_net << endl;
 
+    cout << "sizeof packet: " << sizeof(version_net) + sizeof(msg_length_net) + sizeof(strlen(message)) << endl;
 
     memcpy(data, &version_net, sizeof(version_net));
     memcpy(&(data[2]), &msg_length_net, sizeof(msg_length_net));
-    memcpy(data + sizeof(version_net) + sizeof(msg_length_net), message, sizeof(strlen(message)));
+    memcpy(&(data[4]), message, sizeof(strlen(message)));
  
     //stringstream packet;
     //packet << htons(version);
