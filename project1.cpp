@@ -451,7 +451,7 @@ int packetize (string msg, char* data) {
 
     memcpy(data, &version_net, sizeof(version_net));
     memcpy(data + sizeof(version), &msg_length_net, sizeof(msg_length_net));
-    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(message));
+    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(strlen(message)));
  
     //stringstream packet;
     //packet << htons(version);
