@@ -382,16 +382,22 @@ int send_msg (int socketfd) {
     cout << "Type message: ";
     getline(cin, msg);
 
+    cout << "You typed: " << msg << endl;
+
     while (check_msg(msg.c_str())) {
         cout << "Type message: ";
         getline(cin, msg);
     }
 
     int required = HEADERSIZE + msg.length();
+    cout << "Required bytes: " << required << "HEADERSIZE: " << HEADERSIZE << endl;
+
     data = (char *)malloc(required);
     memset(data, 0, required);
 
     packetize(msg, data);
+
+    cout << "Packetized: " << data << endl;
 
     int flags = 0;
 
@@ -442,11 +448,16 @@ int packetize (string msg, char* data) {
     short version = 457;
     const char* message = msg.c_str();
 
+    cout << "Version (host): " << version << endl;
+
     unsigned short version_net = htons(version);
     unsigned short msg_length_net = htons(msg.length());
 
+    cout << "Version (network): " << version_net << endl;
+
+
     memcpy(data, &version_net, sizeof(version_net));
-    memcpy(data + sizeof(version_net), &msg_length_net, sizeof(msg_length_net));
+    memcpy(&(data[2]), &msg_length_net, sizeof(msg_length_net));
     memcpy(data + sizeof(version_net) + sizeof(msg_length_net), message, sizeof(strlen(message)));
  
     //stringstream packet;
