@@ -6,6 +6,8 @@
 // CS457 - Networks
 // Dr. Indrajit Ray
 // License: MIT
+// References : Beej's Guide to Socket Programming
+//              https://beej.us/guide/bgnet/
 
 #include <cstdlib>
 #include <cstdio>
@@ -22,7 +24,7 @@
 
 using namespace std;
 
-const int PORT = 33333;
+const int PORT = 55333;
 const int BACKLOG = 1;
 const int CHARLIMIT = 140;
 
@@ -30,6 +32,8 @@ void usage (int argc, char* argv[]);
 int server_mode (void);
 int client_mode (string ip, string port);
 bool check_args (string serverval, string portval);
+bool is_valid_port (string p);
+bool is_valid_ip_address (string s);
 int start_listening (int portreq);
 int print_status (string ip, string port);
 int make_connection (string ip, string port);
@@ -221,16 +225,42 @@ int make_connection (string ip, string port) {
 bool check_args (string serverval, string portval) {
     cout << "Checking arguments... ";
 
-    int invalid = false;
+    bool invalid = false;
 
-    if (atoi(portval.c_str())) {
+    if (is_valid_port(portval)) {
         invalid = true;
+        cout << "INVALID port!!!" << endl;
     }
     
-    cout << "Arguments valid!" << endl;
+    if (is_valid_ip_address(serverval)) {
+        invalid = true;
+        cout << "INVALID server!" << endl;
+    }
+
+    //cout << "Arguments valid!" << endl;
     return invalid;
 }
 
+bool is_valid_port (string p) {
+    bool invalid = false;
+
+    if (strtol(p.c_str(), NULL, 0) == 0) {
+        invalid = true;
+    }
+
+    return invalid;
+} 
+
+bool is_valid_ip_address (string s) {
+    bool invalid = false;
+    struct sockaddr_in socketaddress;
+
+    if (inet_pton(AF_INET, s.c_str(), &(socketaddress.sin_addr)) == 0) {
+        invalid = true;
+    }
+
+    return invalid;
+} 
 
 int print_status (string ip, string port) {
 
