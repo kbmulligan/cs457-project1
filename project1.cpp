@@ -377,7 +377,6 @@ string prompt_for_msg (void) {
 int send_msg (int socketfd) {
     
     string msg;
-    int msglen = sizeof(msg);
     char* data = NULL;
 
     cout << "Type message: ";
@@ -388,9 +387,7 @@ int send_msg (int socketfd) {
         getline(cin, msg);
     }
 
-    msglen = msg.length();
-
-    int required = HEADERSIZE + sizeof(msg);
+    int required = HEADERSIZE + msg.length();
     data = (char *)malloc(required);
     memset(data, 0, required);
 
@@ -400,7 +397,7 @@ int send_msg (int socketfd) {
 
     int bytes_sent = send(socketfd, data, required, flags);
 
-    if (bytes_sent < msglen) {
+    if (bytes_sent < required) {
         cout << "ERROR: Only partial message sent." << endl;
     }
  
@@ -443,15 +440,14 @@ bool check_msg (const char* msg) {
 // Returns 0 on success
 int packetize (string msg, char* data) {
     short version = 457;
-    short msg_length = 0;
     const char* message = msg.c_str();
 
     unsigned short version_net = htons(version);
     unsigned short msg_length_net = htons(msg.length());
 
     memcpy(data, &version_net, sizeof(version_net));
-    memcpy(data + sizeof(version), &msg_length_net, sizeof(msg_length_net));
-    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(strlen(message)));
+    memcpy(data + sizeof(version_net), &msg_length_net, sizeof(msg_length_net));
+    memcpy(data + sizeof(version_net) + sizeof(msg_length_net), message, sizeof(strlen(message)));
  
     //stringstream packet;
     //packet << htons(version);
