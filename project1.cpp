@@ -462,11 +462,15 @@ int packetize (string msg, char* data) {
     cout << "Msg length (host): " << msg.length() << endl;
     cout << "Msg length (network): " << msg_length_net << endl;
 
-    cout << "sizeof packet: " << sizeof(version_net) + sizeof(msg_length_net) + sizeof(strlen(message)) << endl;
+    cout << "sizeof packet: " << sizeof(version_net) + sizeof(msg_length_net) + strlen(message) << endl;
+
+    cout << "sizeof(version_net): " << sizeof(version_net) << endl;
+    cout << "sizeof(msg_length_net): " << sizeof(msg_length_net) << endl;
+    cout << "strlen(message): " << strlen(message) << endl;
 
     memcpy(data, &version_net, sizeof(version_net));
     memcpy(&(data[2]), &msg_length_net, sizeof(msg_length_net));
-    memcpy(&(data[4]), message, sizeof(strlen(message)));
+    memcpy(&(data[4]), message, strlen(message));
  
     //stringstream packet;
     //packet << htons(version);
