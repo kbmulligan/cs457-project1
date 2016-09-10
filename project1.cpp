@@ -426,6 +426,11 @@ int recv_msg (int socketfd) {
     cout << "Version: " << version << endl;
     cout << "Message length: " << msglen << endl;
     cout << "Message received: " << &buffer[4] << " (" << bytes_received << " bytes)" << endl;
+    
+    for (int i = 0; i < bytes_received; i++) {
+        cout << " " << buffer[i] << "    "  << endl;     
+    }
+    cout << endl;
 
     return 0;
 }
