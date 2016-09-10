@@ -27,6 +27,7 @@ using namespace std;
 const int PORT = 55333;
 const int BACKLOG = 1;
 const unsigned int CHARLIMIT = 140;
+const unsigned int HEADERSIZE = 4;
 
 void usage (int argc, char* argv[]);
 int server_mode (void);
@@ -388,17 +389,22 @@ int send_msg (int socketfd) {
     }
 
     msglen = msg.length();
- 
-    //malloc();
-    packetize(string(msg), data);
+
+    int required = HEADERSIZE + sizeof(msg);
+    data = (char *)malloc(required);
+    memset(data, 0, required);
+
+    packetize(msg, data);
 
     int flags = 0;
 
-    int bytes_sent = send(socketfd, msg.c_str(), msglen, flags);
+    int bytes_sent = send(socketfd, data, required, flags);
 
     if (bytes_sent < msglen) {
         cout << "ERROR: Only partial message sent." << endl;
     }
+ 
+    free(data);
  
     return 0;
 }
@@ -434,11 +440,18 @@ bool check_msg (const char* msg) {
 int packetize (string msg, char* data) {
     short version = 457;
     short msg_length = 0;
+    const char* message = msg.c_str();
 
-    //memcpy();
-    stringstream packet;
-    packet << htons(version);
-    packet << htons(msg_length);
+    version = htons(version);
+    msg_length = htons(msg.length());
+
+    memcpy(data, &version, sizeof(version));
+    memcpy(data + sizeof(version), &msg_length, sizeof(msg_length));
+    memcpy(data + sizeof(version) + sizeof(msg_length), message, sizeof(msg));
+ 
+    //stringstream packet;
+    //packet << htons(version);
+    //packet << htons(msg_length);
  
     //cout << packet << endl;
 
