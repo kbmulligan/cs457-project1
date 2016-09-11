@@ -24,6 +24,8 @@
 
 using namespace std;
 
+const char* PROMPT = "You: ";
+const bool VERBOSE = false;
 const int PORT = 55333;
 const int BACKLOG = 1;
 const unsigned int CHARLIMIT = 140;
@@ -52,7 +54,7 @@ int packetize (string msg, char* data);
 
 int main (int argc, char* argv[]) {
 
-    cout << "Welcome to chat!" << endl;
+    cout << "Welcome to Chat!" << endl;
 
     int opt = 0;
     string portval, serverval;
@@ -87,7 +89,9 @@ int main (int argc, char* argv[]) {
             usage(argc, argv);
             exit(1);
         } else {
-            cout << "Valid!" << endl;
+            if (VERBOSE) {
+                cout << "Valid!" << endl;
+            }
         }
 
         client_mode(serverval, portval);
@@ -169,7 +173,9 @@ int get_ip_from_addr (struct addrinfo* addr, char* ipstr) {
 
 int server_mode () {
 
-    cout << "Server mode..." << endl;
+    if (VERBOSE) {
+        cout << "Server mode..." << endl;
+    }
     start_listening(PORT);
 
     return 0;
@@ -177,7 +183,9 @@ int server_mode () {
 
 int client_mode (string ip, string port) {
 
-    cout << "Client mode..." << endl;
+    if (VERBOSE) {
+        cout << "Client mode..." << endl;
+    }
     make_connection(ip, port);
 
     return 0;
@@ -185,9 +193,12 @@ int client_mode (string ip, string port) {
 
 int make_connection (string ip, string port) {
 
-    cout << "Connecting to..." << endl;
-    cout << "SERVER : " << ip << endl;
-    cout << "PORT   : " << port << endl;
+    cout << "Connecting to server... ";
+    if (VERBOSE) {
+        cout << endl;
+        cout << "SERVER : " << ip << endl;
+        cout << "PORT   : " << port << endl;
+    }
 
     struct addrinfo hints, *res;
     int sockfd = -1;
@@ -213,6 +224,9 @@ int make_connection (string ip, string port) {
         close(sockfd);
         cerr << "make_connection error: connect" << endl;
         return 2;
+    } else {
+        cout << "Connected!" << endl;
+        cout << "Connected to a friend! You send first." << endl;
     }
 
     // done with this addrinfo
@@ -231,7 +245,7 @@ int make_connection (string ip, string port) {
 }
 
 bool check_args (string serverval, string portval) {
-    cout << "Checking arguments... ";
+    //cout << "Checking arguments... ";
 
     bool invalid = false;
 
@@ -331,7 +345,7 @@ int start_listening (int portreq) {
         return 2;
     }
  
-    cout << "Waiting for connection to " << get_ip() << " on port " << port << endl;
+    cout << "Waiting for a connection on " << get_ip() << " port " << port << endl;
 
     struct sockaddr_storage peeraddr;
     socklen_t peeraddrsize = sizeof(peeraddr);
@@ -343,8 +357,9 @@ int start_listening (int portreq) {
     } else {
         char peeraddrstr[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET, &((struct sockaddr_in*) &peeraddr)->sin_addr, peeraddrstr, INET6_ADDRSTRLEN);
-        cout << "Good connection!" << endl;
-        cout << "Connection from : " << peeraddrstr << endl;
+        //cout << "Good connection!" << endl;
+        //cout << "Connection from : " << peeraddrstr << endl;
+        cout << "Found a friend! You receive first." << endl;
         comm_loop(connectedfd);
     }
     
@@ -379,18 +394,20 @@ int send_msg (int socketfd) {
     string msg;
     char* data = NULL;
 
-    cout << "Type message: ";
+    cout << PROMPT;
     getline(cin, msg);
 
     while (check_msg(msg.c_str())) {
-        cout << "Type message: ";
+        cout << PROMPT;
         getline(cin, msg);
     }
 
-    cout <<     "You typed   : " << msg << endl;
+    // cout <<     "You typed   : " << msg << endl;
 
     int required = HEADERSIZE + msg.length();
-    cout << "Required bytes: " << required << "   HEADERSIZE: " << HEADERSIZE << endl;
+    if (VERBOSE) {
+        cout << "Required bytes: " << required << "   HEADERSIZE: " << HEADERSIZE << endl;
+    }
 
     data = (char *)malloc(required);
     memset(data, 0, required);
@@ -414,19 +431,32 @@ int send_msg (int socketfd) {
 
 int recv_msg (int socketfd) {
 
+    // declare and zeroize
     int bufferlen = 255;
     char buffer[bufferlen];
     memset(buffer, 0, bufferlen);
     int flags = 0;
  
-    cout << "Waiting for message..." << endl;
+    if (VERBOSE) {
+        cout << "Waiting for message..." << endl;
+    }
+
     int bytes_received = recv(socketfd, buffer, bufferlen, flags);
 
     uint16_t version = ntohs(*(uint16_t *)&(buffer[0]));
     uint16_t msglen = ntohs(*(uint16_t *)&(buffer[2]));
-    cout << "Version: " << version << endl;
-    cout << "Message length: " << msglen << endl;
-    cout << "Message received: " << &buffer[4] << " (" << bytes_received << " bytes)" << endl;
+    if (VERBOSE) {
+        cout << "Version: " << version << endl;
+        cout << "Message length: " << msglen << endl;
+    }
+
+    // show actual message
+    cout << "Friend: " << &buffer[4] << endl; 
+
+    if (bytes_received == 0) {
+        cout << "No bytes received, connection lost." << endl;
+    }
+
     
     //for (int i = 0; i < bytes_received; i++) {
     //    cout << " " << buffer[i] << "    "  << endl;     
@@ -445,6 +475,7 @@ bool check_msg (const char* msg) {
         is_too_long = true;
     }
 
+    
     return is_too_long;
 }
 
@@ -458,17 +489,20 @@ int packetize (string msg, char* data) {
     uint16_t version_net = htons(version);
     uint16_t msg_length_net = htons(msg.length());
 
-    cout << "Version (host): " << version << endl;
-    cout << "Version (network): " << version_net << endl;
-    cout << "Msg length (host): " << msg.length() << endl;
-    cout << "Msg length (network): " << msg_length_net << endl;
+    if (VERBOSE) {
+       cout << "Version (host): " << version << endl;
+       cout << "Version (network): " << version_net << endl;
+       cout << "Msg length (host): " << msg.length() << endl;
+       cout << "Msg length (network): " << msg_length_net << endl;
 
-    cout << "sizeof packet: " << sizeof(version_net) + sizeof(msg_length_net) + strlen(message) << endl;
+       cout << "sizeof packet: " << sizeof(version_net) + sizeof(msg_length_net) + strlen(message) << endl;
 
-    cout << "sizeof(version_net): " << sizeof(version_net) << endl;
-    cout << "sizeof(msg_length_net): " << sizeof(msg_length_net) << endl;
-    cout << "strlen(message): " << strlen(message) << endl;
+       cout << "sizeof(version_net): " << sizeof(version_net) << endl;
+       cout << "sizeof(msg_length_net): " << sizeof(msg_length_net) << endl;
+       cout << "strlen(message): " << strlen(message) << endl;
+    }
 
+    // manually copy header info and message to data
     memcpy(data, &version_net, sizeof(version_net));
     memcpy(&(data[2]), &msg_length_net, sizeof(msg_length_net));
     memcpy(&(data[4]), message, strlen(message));
